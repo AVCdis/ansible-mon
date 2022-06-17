@@ -1,0 +1,72 @@
+---
+- name: Create node-exporter user
+  ansible.builtin.user:
+    name: "{{ node_exporter_user }}"
+    create_home: false
+    shell: /bin/false
+    groups: sudo
+    state: present
+
+- name: Fetch node-exporter package
+  ansible.builtin.get_url:
+    url: https://github.com/prometheus/node_exporter/releases/download/v1.3.1/node_exporter-1.3.1.linux-amd64.tar.gz
+    dest: /tmp/node_exporter-1.3.1.linux-amd64.tar.gz
+    mode: 0644
+
+- name: Extract node-exporter package into /tmp/
+  ansible.builtin.unarchive:
+    src: /tmp/node_exporter-1.3.1.linux-amd64.tar.gz
+    dest: /tmp/
+    remote_src: true
+
+- name: Add bin for node-exporter
+  ansible.builtin.copy:
+    src: /tmp/node_exporter-1.3.1.linux-amd64/node_exporter
+    dest: /usr/local/bin/
+    remote_src: true
+    owner: node_exporter
+    group: node_exporter
+    mode: 0644
+
+# - name: Touch service file for node-exporter
+#   ansible.builtin.file:
+#     path: /etc/systemd/system/node_exporter.service
+#     state: touch
+#     mode: 0755
+
+- name: Create/Update node-exporter service
+  ansible.builtin.template:
+    src: node-exporter-service.yml
+    dest: /etc/systemd/system/node_exporter.service
+    mode: 0755
+
+# - name: Create/Update node-exporter service
+#   ansible.builtin.blockinfile:
+#     path: /etc/systemd/system/node_exporter.service
+#     block: |
+#       [Unit]
+#       Description=Node Exporter
+#       After=network.target
+
+#       [Service]
+#       User=node_exporter
+#       Group=node_exporter
+#       Type=simple
+#       ExecStart=/usr/local/bin/node_exporter
+
+#       [Install]
+#       WantedBy=multi-user.target
+
+- name: Force systemd to reread configs
+  ansible.builtin.systemd: daemon_reload=yes
+
+- name: Start service node_exporter, if not started
+  ansible.builtin.service:
+    name: node_exporter
+    state: started
+
+# - name: Issue daemon-reload to pick up config changes for node-exporter
+#   ansible.builtin.systemd:
+#     state: started
+#     daemon_reload: true
+#     name: node_exporter

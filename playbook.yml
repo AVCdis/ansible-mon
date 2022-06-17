@@ -1,0 +1,7 @@
+---
+- name: Install Docker
+  hosts: monitoring
+  become: true
+  roles:
+    - mon-init
+    - docker

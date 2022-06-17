@@ -1,0 +1,5 @@
+---
+- include: user.yml
+- include: hosts.yml
+- include: node-exporter.yml
+- include: promtail.yml

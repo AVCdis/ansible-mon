@@ -1,0 +1,2 @@
+[monitoring]
+34.71.57.23 ansible_connection=ssh ansible_user=root ansible_ssh_private_key_file=./.ssh/id_rsa

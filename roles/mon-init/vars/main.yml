@@ -1,0 +1,6 @@
+---
+monitoring_user: monitoring
+node_exporter_user: node_exporter
+monitoring_required_packages: 
+  - zip
+  - unzip

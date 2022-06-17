@@ -1,0 +1,104 @@
+---
+- name: Fetch promtail package
+  ansible.builtin.get_url:
+    url: https://github.com/grafana/loki/releases/download/v2.4.2/promtail-linux-amd64.zip
+    dest: /tmp/promtail-linux-amd64.zip
+    mode: 0644
+
+- name: Extract node-exporter package into /tmp/
+  ansible.builtin.unarchive:
+    src: /tmp/promtail-linux-amd64.zip
+    dest: /tmp/
+    remote_src: true
+
+- name: Add bin for promtail
+  ansible.builtin.copy:
+    src: /tmp/promtail-linux-amd64
+    dest: /usr/local/bin
+    remote_src: true
+    owner: node_exporter
+    group: node_exporter
+    mode: 0644
+
+- name: Create prom directory
+  ansible.builtin.file:
+    path: /etc/promtail
+    state: directory
+    recurse: true
+    mode: 0755
+
+- name: Create prom data directory
+  ansible.builtin.file:
+    path: /data/promtail
+    state: directory
+    recurse: true
+    mode: 0755
+
+# - name: Touch config file for promtail
+#   ansible.builtin.file:
+#     path: /etc/promtail/config.yaml
+#     state: touch
+#     mode: 0755
+
+- name: Create/Update promtail config file
+  ansible.builtin.template:
+    src: promtail-service.yml
+    dest: /etc/promtail/config.yaml
+    mode: 0755
+
+# - name: Create/Update promtail config file
+#   ansible.builtin.blockinfile:
+#     path: /etc/promtail/config.yaml
+#     block: |
+#       server:
+#         http_listen_port: 9080
+#         grpc_listen_port: 0
+#       positions:
+#         filename: /data/promtail/positions.yaml
+#       clients:
+#         - url: http://200.60.145.44:3100/loki/api/v1/push
+#       scrape_configs:
+#       # Local machine logs
+#       - job_name: system
+#         static_configs:
+#         - targets:
+#             - localhost
+#           labels:
+#             job: varlogs-mon-server # FE: varlogs-scfe, BE: varlogs-scbe, Gualdaticker: varlogs-gualda, SAAS: varlogs-saas
+#             __path__: /var/log/*log
+
+- name: Touch service file for promtail
+  ansible.builtin.file:
+    path: /etc/systemd/system/promtail.service
+    state: touch
+    mode: 0755
+
+- name: Create/Update promtail config file
+  ansible.builtin.blockinfile:
+    path: /etc/systemd/system/promtail.service
+    block: |
+      [Unit]
+      Description=Promtail service
+      After=network.target
+
+      [Service]
+      Type=simple
+      User=root
+      ExecStart=/usr/local/bin/promtail -config.file /etc/promtail/config.yaml
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Force systemd to reread configs
+  ansible.builtin.systemd: daemon_reload=yes
+
+- name: Start service node_exporter, if not started
+  ansible.builtin.service:
+    name: promtail.service
+    state: started
+
+# - name: Issue daemon-reload to pick up config changes for promtail
+#   ansible.builtin.systemd:
+#     state: started
+#     daemon_reload: true
+#     name: promtail.service

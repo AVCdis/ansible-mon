@@ -1,0 +1,41 @@
+---
+- name: Install aptitude using apt
+  ansible.builtin.apt:
+    name: aptitude
+    state: present
+    update_cache: true
+
+- name: Install required system packages for Mon tools
+  ansible.builtin.apt:
+    pkg:
+    name: "{{ monitoring_required_packages }}"
+    state: present
+    update_cache: true
+
+- name: Create monitoring user
+  ansible.builtin.user:
+    name: "{{ monitoring_user }}"
+    shell: /bin/bash
+    groups: sudo
+    state: present
+
+- name: Create paswordless file for monitoring user
+  ansible.builtin.file:
+    path: /etc/sudoers.d/monitoring
+    state: touch
+    mode: 0644
+
+- name: Set authorized key for monitoring user
+  authorized_key:
+    user: monitoring
+    state: present
+    key: "{{ lookup('file', '/Users/qwerty/Documents/Dev/ansible-mon/.ssh/id_rsa.pub') }}"
+
+# - name: Set paswordless configuration for the monitoring user
+#   shell: |
+#     echo 'monitoring ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers.d/monitoring
+
+- name: Update sudoers/monitoring file
+  ansible.builtin.lineinfile:
+    path: /etc/sudoers.d/{{ monitoring_user }}
+    line: 'monitoring ALL=(ALL) NOPASSWD: ALL'
